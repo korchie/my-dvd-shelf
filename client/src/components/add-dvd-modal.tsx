@@ -81,6 +81,22 @@ export function AddDvdModal({ open, onOpenChange, editingDvd }: AddDvdModalProps
     setIsLookingUp(true);
     try {
       const response = await apiRequest("POST", "/api/lookup", { title });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        if (response.status === 401 && errorData.error === "API_KEY_INVALID") {
+          toast({ 
+            title: "API Key Issue", 
+            description: "Please check your OMDB API key configuration. You can get a free key at omdbapi.com",
+            variant: "destructive" 
+          });
+          return;
+        }
+        
+        throw new Error(errorData.message || "Movie lookup failed");
+      }
+      
       const movieData = await response.json();
       
       form.setValue("title", movieData.title);
@@ -91,11 +107,15 @@ export function AddDvdModal({ open, onOpenChange, editingDvd }: AddDvdModalProps
         form.setValue("posterUrl", movieData.posterUrl);
       }
       
-      toast({ title: "Movie data found!" });
+      toast({ 
+        title: "Movie data found!", 
+        description: `Found: ${movieData.title} (${movieData.year})`
+      });
     } catch (error) {
+      console.error("Movie lookup error:", error);
       toast({ 
         title: "Movie not found", 
-        description: "Please enter the details manually.",
+        description: "Please enter the details manually or check the movie title.",
         variant: "destructive" 
       });
     } finally {
@@ -133,24 +153,46 @@ export function AddDvdModal({ open, onOpenChange, editingDvd }: AddDvdModalProps
 
           <div className="space-y-6">
             {!editingDvd && (
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-center text-white">
-                <Camera className="mx-auto h-12 w-12 mb-4 opacity-90" />
-                <h4 className="text-lg font-medium mb-2">Scan Barcode</h4>
-                <p className="text-sm opacity-90 mb-4">
-                  Use your camera to scan the DVD barcode for automatic lookup
-                </p>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowScanner(true)}
-                  disabled={isLookingUp}
-                >
-                  Start Scanner
-                </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-center text-white">
+                  <Camera className="mx-auto h-12 w-12 mb-4 opacity-90" />
+                  <h4 className="text-lg font-medium mb-2">Scan Barcode</h4>
+                  <p className="text-sm opacity-90 mb-4">
+                    Use your camera to scan the DVD barcode
+                  </p>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowScanner(true)}
+                    disabled={isLookingUp}
+                    className="w-full"
+                  >
+                    Start Scanner
+                  </Button>
+                </div>
+                
+                <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-center text-white">
+                  <div className="mx-auto h-12 w-12 mb-4 opacity-90 text-4xl">🔍</div>
+                  <h4 className="text-lg font-medium mb-2">Search Movie</h4>
+                  <p className="text-sm opacity-90 mb-4">
+                    Search by movie title for auto-fill
+                  </p>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const title = prompt("Enter movie title to search:");
+                      if (title) lookupMovie(title);
+                    }}
+                    disabled={isLookingUp}
+                    className="w-full"
+                  >
+                    Search Movie
+                  </Button>
+                </div>
               </div>
             )}
 
             <div className="text-center text-gray-500 text-sm">
-              {editingDvd ? "Edit details below" : "or add manually below"}
+              {editingDvd ? "Edit details below" : "or enter details manually below"}
             </div>
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

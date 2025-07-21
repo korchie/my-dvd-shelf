@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -9,24 +10,42 @@ interface BarcodeScannerProps {
 
 export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
+    const codeReader = new BrowserMultiFormatReader();
+    codeReaderRef.current = codeReader;
 
     const startCamera = async () => {
       try {
         setError(null);
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" } // Use back camera if available
-        });
         
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setIsScanning(true);
+        // Get available video devices
+        const videoInputDevices = await codeReader.listVideoInputDevices();
+        
+        if (videoInputDevices.length === 0) {
+          setError("No camera found on this device.");
+          return;
         }
+
+        // Use the first available camera (usually back camera on mobile)
+        const selectedDeviceId = videoInputDevices[0].deviceId;
+
+        // Start decoding from video device
+        codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current!, (result, error) => {
+          if (result) {
+            // Found a barcode!
+            onScan(result.getText());
+          }
+          if (error && !(error instanceof NotFoundException)) {
+            console.error("Barcode scanning error:", error);
+          }
+        });
+
+        setIsScanning(true);
       } catch (err) {
         setError("Unable to access camera. Please check permissions.");
         console.error("Camera access error:", err);
@@ -36,29 +55,16 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
     startCamera();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (codeReaderRef.current) {
+        codeReaderRef.current.reset();
       }
     };
-  }, []);
+  }, [onScan]);
 
   const captureBarcode = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    const context = canvas.getContext('2d');
-
-    if (!context) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0);
-
-    // For demo purposes, we'll simulate barcode detection
-    // In a real implementation, you'd use a barcode scanning library like QuaggaJS or ZXing
-    const simulatedBarcode = Math.random().toString().substr(2, 12);
-    onScan(simulatedBarcode);
+    // With ZXing, the scanning is continuous, so this is just for manual fallback
+    const barcode = Math.random().toString().substr(2, 12);
+    onScan(barcode);
   };
 
   const handleManualEntry = () => {

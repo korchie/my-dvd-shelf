@@ -112,26 +112,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title or barcode required" });
       }
       
-      const apiKey = process.env.OMDB_API_KEY || process.env.VITE_OMDB_API_KEY || "demo_key";
-      const searchTerm = title || barcode;
-      
-      const response = await fetch(`http://www.omdbapi.com/?t=${encodeURIComponent(searchTerm)}&apikey=${apiKey}`);
-      const data = await response.json();
-      
-      if (data.Response === "False") {
-        return res.status(404).json({ message: "Movie not found" });
+      const apiKey = process.env.OMDB_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "OMDB API key not configured" });
       }
       
-      const movieData = {
-        title: data.Title,
-        year: parseInt(data.Year),
-        genre: data.Genre,
-        director: data.Director,
-        posterUrl: data.Poster !== "N/A" ? data.Poster : null,
-      };
+      // Test the API key first
+      const testUrl = `http://www.omdbapi.com/?t=test&apikey=${apiKey}`;
+      const testResponse = await fetch(testUrl);
+      const testData = await testResponse.json();
       
+      if (testData.Error === "Invalid API key!") {
+        return res.status(401).json({ 
+          message: "Invalid OMDB API key. Please check your API key at http://www.omdbapi.com/apikey.aspx",
+          error: "API_KEY_INVALID"
+        });
+      }
+      
+      const searchTerm = title || barcode;
+      let url = `http://www.omdbapi.com/?apikey=${apiKey}`;
+      
+      // If it looks like a barcode (numeric), search by IMDb ID or title
+      if (/^\d+$/.test(searchTerm)) {
+        // For barcode, try searching by title first, then fallback to search
+        url += `&s=${encodeURIComponent(searchTerm)}`;
+      } else {
+        // For title search
+        url += `&t=${encodeURIComponent(searchTerm)}`;
+      }
+      
+      console.log(`Looking up movie: ${searchTerm} with URL: ${url}`);
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      console.log(`OMDB response:`, data);
+      
+      if (data.Response === "False") {
+        return res.status(404).json({ 
+          message: data.Error || "Movie not found",
+          searchTerm 
+        });
+      }
+      
+      let movieData;
+      
+      // Handle search results (when using 's' parameter)
+      if (data.Search && Array.isArray(data.Search)) {
+        // Take the first result from search
+        const firstResult = data.Search[0];
+        if (!firstResult) {
+          return res.status(404).json({ 
+            message: "No movies found in search results",
+            searchTerm 
+          });
+        }
+        
+        // Get detailed info for the first result
+        const detailUrl = `http://www.omdbapi.com/?i=${firstResult.imdbID}&apikey=${apiKey}`;
+        const detailResponse = await fetch(detailUrl);
+        const detailData = await detailResponse.json();
+        
+        if (detailData.Response === "False") {
+          return res.status(404).json({ 
+            message: "Movie details not found",
+            searchTerm 
+          });
+        }
+        
+        movieData = {
+          title: detailData.Title,
+          year: parseInt(detailData.Year),
+          genre: detailData.Genre,
+          director: detailData.Director,
+          posterUrl: detailData.Poster !== "N/A" ? detailData.Poster : null,
+          barcode: barcode || null,
+        };
+      } else {
+        // Handle direct movie result (when using 't' parameter)
+        movieData = {
+          title: data.Title,
+          year: parseInt(data.Year),
+          genre: data.Genre,
+          director: data.Director,
+          posterUrl: data.Poster !== "N/A" ? data.Poster : null,
+          barcode: barcode || null,
+        };
+      }
+      
+      console.log(`Movie data found:`, movieData);
       res.json(movieData);
     } catch (error) {
+      console.error("Movie lookup error:", error);
       res.status(500).json({ message: "Failed to lookup movie data" });
     }
   });
