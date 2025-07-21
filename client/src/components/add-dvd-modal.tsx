@@ -39,7 +39,7 @@ export function AddDvdModal({ open, onOpenChange, editingDvd }: AddDvdModalProps
       year: editingDvd?.year || undefined,
       genre: editingDvd?.genre || "",
       director: editingDvd?.director || "",
-      status: editingDvd?.status || "owned",
+      status: (editingDvd?.status as "owned" | "wishlist") || "owned",
       posterUrl: editingDvd?.posterUrl || "",
       barcode: editingDvd?.barcode || "",
     },
@@ -195,7 +195,7 @@ export function AddDvdModal({ open, onOpenChange, editingDvd }: AddDvdModalProps
               {editingDvd ? "Edit details below" : "or enter details manually below"}
             </div>
 
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4">
               <div>
                 <Label htmlFor="title">Title *</Label>
                 <Input
@@ -228,7 +228,7 @@ export function AddDvdModal({ open, onOpenChange, editingDvd }: AddDvdModalProps
                 <div>
                   <Label>Genre</Label>
                   <Select 
-                    value={form.watch("genre")} 
+                    value={form.watch("genre") || ""} 
                     onValueChange={(value) => form.setValue("genre", value)}
                     disabled={isLookingUp}
                   >

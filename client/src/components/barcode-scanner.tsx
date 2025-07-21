@@ -100,7 +100,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
                 playsInline
                 className="w-full h-64 bg-gray-900 rounded-lg object-cover"
               />
-              <canvas ref={canvasRef} className="hidden" />
+              {/* Canvas removed - ZXing handles video processing directly */}
               
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">

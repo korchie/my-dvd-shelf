@@ -2,7 +2,16 @@
 
 ## Overview
 
-This is a full-stack DVD collection management application built with React, Express.js, and PostgreSQL. The application allows users to manage their DVD collections with features like adding/editing DVDs, searching, filtering, and categorizing movies as either "owned" or "wishlist" items.
+This is a full-stack DVD collection management application built with React, Express.js, and PostgreSQL. The application allows users to manage their DVD collections with comprehensive features including barcode scanning, automatic movie data lookup via OMDB API, advanced filtering, search capabilities, and categorizing movies as either "owned" or "wishlist" items.
+
+## Recent Changes (January 2025)
+
+✓ Integrated OMDB API for automatic movie data lookup
+✓ Implemented real barcode scanning using ZXing library
+✓ Added dual-mode movie entry: barcode scan OR title search
+✓ Enhanced UI with side-by-side scanning and search options
+✓ Improved error handling for API key validation
+✓ Added sample movies to demonstrate functionality
 
 ## User Preferences
 
