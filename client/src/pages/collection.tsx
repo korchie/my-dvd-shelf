@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Grid, List, User } from "lucide-react";
+import { Plus, Search, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { CollectionStats } from "@/components/collection-stats";
 import { SidebarFilters } from "@/components/sidebar-filters";
 import { DvdCard } from "@/components/dvd-card";
 import { AddDvdModal } from "@/components/add-dvd-modal";
+import { ProfileDropdown } from "@/components/profile-dropdown";
+import { StatsModal } from "@/components/stats-modal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Dvd } from "@shared/schema";
@@ -28,6 +30,7 @@ export default function Collection() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingDvd, setEditingDvd] = useState<(Dvd) | undefined>();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -151,9 +154,7 @@ export default function Collection() {
                 />
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               </div>
-              <Button variant="ghost" size="sm">
-                <User className="h-5 w-5" />
-              </Button>
+              <ProfileDropdown onOpenStats={() => setIsStatsModalOpen(true)} />
             </div>
           </div>
         </div>
@@ -266,6 +267,13 @@ export default function Collection() {
         open={isAddModalOpen}
         onOpenChange={handleModalClose}
         editingDvd={editingDvd}
+      />
+
+      {/* Stats Modal */}
+      <StatsModal
+        open={isStatsModalOpen}
+        onOpenChange={setIsStatsModalOpen}
+        dvds={dvds}
       />
     </div>
   );
