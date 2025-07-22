@@ -22,10 +22,10 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
     const startCamera = async () => {
       try {
         setError(null);
-        
+
         // Get available video devices
         const videoInputDevices = await codeReader.listVideoInputDevices();
-        
+
         if (videoInputDevices.length === 0) {
           setError("No camera found on this device.");
           return;
@@ -57,13 +57,15 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
     return () => {
       if (codeReaderRef.current) {
         codeReaderRef.current.reset();
+
       }
     };
+
   }, [onScan]);
 
   const captureBarcode = () => {
     // With ZXing, the scanning is continuous, so this is just for manual fallback
-    const barcode = Math.random().toString().substr(2, 12);
+    const barcode = Math.random().toString().substring(2, 12);
     onScan(barcode);
   };
 
@@ -101,7 +103,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
                 className="w-full h-64 bg-gray-900 rounded-lg object-cover"
               />
               {/* Canvas removed - ZXing handles video processing directly */}
-              
+
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="border-2 border-red-500 w-3/4 h-16 bg-transparent"></div>
