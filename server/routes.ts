@@ -1,26 +1,43 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertDvdSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all DVDs
-  app.get("/api/dvds", async (req, res) => {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get user's DVDs
+  app.get("/api/dvds", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
       const { search, status, genre, year } = req.query;
       
       let dvds;
       if (search) {
-        dvds = await storage.searchDvds(search as string);
+        dvds = await storage.searchDvds(search as string, userId);
       } else if (status || genre || year) {
         dvds = await storage.filterDvds({
           status: status as string,
           genre: genre as string,
           year: year ? parseInt(year as string) : undefined,
-        });
+        }, userId);
       } else {
-        dvds = await storage.getAllDvds();
+        dvds = await storage.getUserDvds(userId);
       }
       
       res.json(dvds);
@@ -30,10 +47,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single DVD
-  app.get("/api/dvds/:id", async (req, res) => {
+  app.get("/api/dvds/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
-      const dvd = await storage.getDvd(id);
+      const dvd = await storage.getDvd(id, userId);
       
       if (!dvd) {
         return res.status(404).json({ message: "DVD not found" });
@@ -46,8 +64,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new DVD
-  app.post("/api/dvds", async (req, res) => {
+  app.post("/api/dvds", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validation = insertDvdSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({ 
@@ -56,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const dvd = await storage.createDvd(validation.data);
+      const dvd = await storage.createDvd(validation.data, userId);
       res.status(201).json(dvd);
     } catch (error) {
       res.status(500).json({ message: "Failed to create DVD" });
@@ -64,8 +83,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update DVD
-  app.patch("/api/dvds/:id", async (req, res) => {
+  app.patch("/api/dvds/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
       const validation = insertDvdSchema.partial().safeParse(req.body);
       
@@ -76,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const dvd = await storage.updateDvd(id, validation.data);
+      const dvd = await storage.updateDvd(id, validation.data, userId);
       if (!dvd) {
         return res.status(404).json({ message: "DVD not found" });
       }
@@ -88,10 +108,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete DVD
-  app.delete("/api/dvds/:id", async (req, res) => {
+  app.delete("/api/dvds/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
-      const deleted = await storage.deleteDvd(id);
+      const deleted = await storage.deleteDvd(id, userId);
       
       if (!deleted) {
         return res.status(404).json({ message: "DVD not found" });

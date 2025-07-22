@@ -47,7 +47,18 @@ export default function Collection() {
       queryClient.invalidateQueries({ queryKey: ["/api/dvds"] });
       toast({ title: "DVD deleted successfully!" });
     },
-    onError: () => {
+    onError: (error) => {
+      if (error.message?.includes("401") && error.message?.includes("Unauthorized")) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({ title: "Failed to delete DVD", variant: "destructive" });
     },
   });

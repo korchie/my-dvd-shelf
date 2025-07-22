@@ -1,95 +1,122 @@
-import { users, dvds, type User, type InsertUser, type Dvd, type InsertDvd } from "@shared/schema";
+import {
+  users,
+  dvds,
+  type User,
+  type UpsertUser,
+  type Dvd,
+  type InsertDvd,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, or, like, gte, lte } from "drizzle-orm";
 
+// Interface for storage operations
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // DVD operations
-  getAllDvds(): Promise<Dvd[]>;
-  getDvd(id: number): Promise<Dvd | undefined>;
-  createDvd(dvd: InsertDvd): Promise<Dvd>;
-  updateDvd(id: number, updates: Partial<InsertDvd>): Promise<Dvd | undefined>;
-  deleteDvd(id: number): Promise<boolean>;
-  searchDvds(query: string): Promise<Dvd[]>;
-  filterDvds(filters: { status?: string; genre?: string; year?: number }): Promise<Dvd[]>;
+  getUserDvds(userId: string): Promise<Dvd[]>;
+  getDvd(id: number, userId: string): Promise<Dvd | undefined>;
+  createDvd(dvd: InsertDvd, userId: string): Promise<Dvd>;
+  updateDvd(id: number, updates: Partial<InsertDvd>, userId: string): Promise<Dvd | undefined>;
+  deleteDvd(id: number, userId: string): Promise<boolean>;
+  searchDvds(query: string, userId: string): Promise<Dvd[]>;
+  filterDvds(filters: { status?: string; genre?: string; year?: number }, userId: string): Promise<Dvd[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private dvds: Map<number, Dvd>;
-  private currentUserId: number;
-  private currentDvdId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.dvds = new Map();
-    this.currentUserId = 1;
-    this.currentDvdId = 1;
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+export class DatabaseStorage implements IStorage {
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async getAllDvds(): Promise<Dvd[]> {
-    return Array.from(this.dvds.values());
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
-  async getDvd(id: number): Promise<Dvd | undefined> {
-    return this.dvds.get(id);
+  // DVD operations
+  async getUserDvds(userId: string): Promise<Dvd[]> {
+    return await db.select().from(dvds).where(eq(dvds.userId, userId));
   }
 
-  async createDvd(insertDvd: InsertDvd): Promise<Dvd> {
-    const id = this.currentDvdId++;
-    const dvd: Dvd = { ...insertDvd, id };
-    this.dvds.set(id, dvd);
+  async getDvd(id: number, userId: string): Promise<Dvd | undefined> {
+    const [dvd] = await db
+      .select()
+      .from(dvds)
+      .where(and(eq(dvds.id, id), eq(dvds.userId, userId)));
     return dvd;
   }
 
-  async updateDvd(id: number, updates: Partial<InsertDvd>): Promise<Dvd | undefined> {
-    const existingDvd = this.dvds.get(id);
-    if (!existingDvd) return undefined;
+  async createDvd(insertDvd: InsertDvd, userId: string): Promise<Dvd> {
+    const [dvd] = await db
+      .insert(dvds)
+      .values({ ...insertDvd, userId })
+      .returning();
+    return dvd;
+  }
+
+  async updateDvd(id: number, updates: Partial<InsertDvd>, userId: string): Promise<Dvd | undefined> {
+    const [dvd] = await db
+      .update(dvds)
+      .set(updates)
+      .where(and(eq(dvds.id, id), eq(dvds.userId, userId)))
+      .returning();
+    return dvd;
+  }
+
+  async deleteDvd(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(dvds)
+      .where(and(eq(dvds.id, id), eq(dvds.userId, userId)));
+    return result.rowCount > 0;
+  }
+
+  async searchDvds(query: string, userId: string): Promise<Dvd[]> {
+    return await db
+      .select()
+      .from(dvds)
+      .where(
+        and(
+          eq(dvds.userId, userId),
+          or(
+            like(dvds.title, `%${query}%`),
+            like(dvds.director, `%${query}%`),
+            like(dvds.genre, `%${query}%`)
+          )
+        )
+      );
+  }
+
+  async filterDvds(filters: { status?: string; genre?: string; year?: number }, userId: string): Promise<Dvd[]> {
+    let conditions = [eq(dvds.userId, userId)];
     
-    const updatedDvd: Dvd = { ...existingDvd, ...updates };
-    this.dvds.set(id, updatedDvd);
-    return updatedDvd;
-  }
+    if (filters.status) {
+      conditions.push(eq(dvds.status, filters.status));
+    }
+    if (filters.genre) {
+      conditions.push(like(dvds.genre, `%${filters.genre}%`));
+    }
+    if (filters.year) {
+      conditions.push(eq(dvds.year, filters.year));
+    }
 
-  async deleteDvd(id: number): Promise<boolean> {
-    return this.dvds.delete(id);
-  }
-
-  async searchDvds(query: string): Promise<Dvd[]> {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.dvds.values()).filter(dvd =>
-      dvd.title.toLowerCase().includes(lowerQuery) ||
-      dvd.director?.toLowerCase().includes(lowerQuery) ||
-      dvd.genre?.toLowerCase().includes(lowerQuery)
-    );
-  }
-
-  async filterDvds(filters: { status?: string; genre?: string; year?: number }): Promise<Dvd[]> {
-    return Array.from(this.dvds.values()).filter(dvd => {
-      if (filters.status && dvd.status !== filters.status) return false;
-      if (filters.genre && dvd.genre !== filters.genre) return false;
-      if (filters.year && dvd.year !== filters.year) return false;
-      return true;
-    });
+    return await db.select().from(dvds).where(and(...conditions));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

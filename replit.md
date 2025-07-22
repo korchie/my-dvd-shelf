@@ -11,7 +11,10 @@ This is a full-stack DVD collection management application built with React, Exp
 ✓ Added dual-mode movie entry: barcode scan OR title search
 ✓ Enhanced UI with side-by-side scanning and search options
 ✓ Improved error handling for API key validation
-✓ Added sample movies to demonstrate functionality
+✓ Added Google authentication using Replit Auth
+✓ Migrated to PostgreSQL database with user-specific DVD collections
+✓ Added landing page for unauthenticated users
+✓ Implemented user profiles with authentication state management
 
 ## User Preferences
 
@@ -39,14 +42,16 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL (configured for Neon serverless)
 - **ORM**: Drizzle ORM for type-safe database operations
 - **Migrations**: Drizzle Kit for schema management
-- **Schema**: Two main entities - users and dvds
-- **Storage Interface**: Abstract storage interface with in-memory implementation for development
+- **Schema**: Three main entities - users (for Replit Auth), sessions (for auth sessions), and dvds (user-specific collections)
+- **Storage Interface**: DatabaseStorage implementation with user-scoped operations
+- **Authentication**: Replit Auth for Google OAuth integration
 
 ## Key Components
 
 ### Database Schema
-- **Users**: Basic user management with username/password
-- **DVDs**: Comprehensive movie data including title, year, genre, director, status (owned/wishlist), poster URL, and barcode
+- **Users**: Google user profiles with email, names, profile images (via Replit Auth)
+- **Sessions**: PostgreSQL-backed session storage for authentication
+- **DVDs**: User-specific movie collections with title, year, genre, director, status (owned/wishlist), poster URL, and barcode
 
 ### Frontend Components
 - **Collection Management**: Main dashboard with grid/list views
