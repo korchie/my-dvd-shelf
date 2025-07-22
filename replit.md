@@ -1,8 +1,8 @@
-# DVD Collection Manager
+# My DVD Shelf
 
 ## Overview
 
-This is a full-stack DVD collection management application built with React, Express.js, and PostgreSQL. The application allows users to manage their DVD collections with comprehensive features including barcode scanning, automatic movie data lookup via OMDB API, advanced filtering, search capabilities, and categorizing movies as either "owned" or "wishlist" items.
+My DVD Shelf is a full-stack DVD collection management application built with React, Express.js, and PostgreSQL. The application allows users to manage their DVD collections with comprehensive features including barcode scanning, automatic movie data lookup via OMDB API, advanced filtering, search capabilities, and categorizing movies as either "owned" or "wishlist" items.
 
 ## Recent Changes (January 2025)
 

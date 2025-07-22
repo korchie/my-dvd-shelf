@@ -10,7 +10,7 @@ export default function Landing() {
         <div className="text-center mb-16">
           <div className="flex justify-center items-center mb-6">
             <Disc3 className="h-16 w-16 text-purple-400 mr-4" />
-            <h1 className="text-5xl font-bold text-white">DVD Collection Manager</h1>
+            <h1 className="text-5xl font-bold text-white">My DVD Shelf</h1>
           </div>
           <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
             Organize your DVD collection with ease. Scan barcodes, track your movies, and manage your wishlist all in one place.

@@ -152,7 +152,7 @@ export default function Collection() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
               <div className="text-2xl">💿</div>
-              <h1 className="text-xl font-semibold text-gray-900">DVD Collection</h1>
+              <h1 className="text-xl font-semibold text-gray-900">My DVD Shelf</h1>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
