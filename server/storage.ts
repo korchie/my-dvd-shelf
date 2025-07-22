@@ -15,15 +15,22 @@ export interface IStorage {
   // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // DVD operations
   getUserDvds(userId: string): Promise<Dvd[]>;
   getDvd(id: number, userId: string): Promise<Dvd | undefined>;
   createDvd(dvd: InsertDvd, userId: string): Promise<Dvd>;
-  updateDvd(id: number, updates: Partial<InsertDvd>, userId: string): Promise<Dvd | undefined>;
+  updateDvd(
+    id: number,
+    updates: Partial<InsertDvd>,
+    userId: string
+  ): Promise<Dvd | undefined>;
   deleteDvd(id: number, userId: string): Promise<boolean>;
   searchDvds(query: string, userId: string): Promise<Dvd[]>;
-  filterDvds(filters: { status?: string; genre?: string; year?: number }, userId: string): Promise<Dvd[]>;
+  filterDvds(
+    filters: { status?: string; genre?: string; year?: number },
+    userId: string
+  ): Promise<Dvd[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -70,7 +77,11 @@ export class DatabaseStorage implements IStorage {
     return dvd;
   }
 
-  async updateDvd(id: number, updates: Partial<InsertDvd>, userId: string): Promise<Dvd | undefined> {
+  async updateDvd(
+    id: number,
+    updates: Partial<InsertDvd>,
+    userId: string
+  ): Promise<Dvd | undefined> {
     const [dvd] = await db
       .update(dvds)
       .set(updates)
@@ -83,7 +94,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(dvds)
       .where(and(eq(dvds.id, id), eq(dvds.userId, userId)));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async searchDvds(query: string, userId: string): Promise<Dvd[]> {
@@ -102,9 +113,12 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async filterDvds(filters: { status?: string; genre?: string; year?: number }, userId: string): Promise<Dvd[]> {
+  async filterDvds(
+    filters: { status?: string; genre?: string; year?: number },
+    userId: string
+  ): Promise<Dvd[]> {
     let conditions = [eq(dvds.userId, userId)];
-    
+
     if (filters.status) {
       conditions.push(eq(dvds.status, filters.status));
     }
@@ -115,7 +129,10 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(dvds.year, filters.year));
     }
 
-    return await db.select().from(dvds).where(and(...conditions));
+    return await db
+      .select()
+      .from(dvds)
+      .where(and(...conditions));
   }
 }
 
